@@ -40,11 +40,13 @@ public class LinkedInController {
     }
 
     @PostMapping(value = "/rePost")
-    public ResponseEntity<String> rePost(@RequestBody(required = true) ActionRequest shareRequest) {
-
-        linkedInServices.repost(shareRequest);
-
-        return ResponseEntity.ok(HttpStatus.OK.toString());
+    public ResponseEntity<String> rePost(@RequestBody(required = true) ActionRequest shareRequest)  {
+        try {
+            linkedInServices.repost(shareRequest);
+            return ResponseEntity.ok(HttpStatus.OK.toString());
+        }catch (Exception e){
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
     
 }

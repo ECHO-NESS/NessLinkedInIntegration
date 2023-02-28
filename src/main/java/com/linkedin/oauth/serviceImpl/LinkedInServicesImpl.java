@@ -29,6 +29,7 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static com.linkedin.oauth.LinkedInOAuthController.token;
@@ -175,27 +176,26 @@ public class LinkedInServicesImpl implements LinkedInServices {
     }
 
 
-
     @Override
-    public void repost(ActionRequest shareRequest) {
+    public void repost(ActionRequest shareRequest) throws Exception {
 
-        String personId=shareRequest.getPersonId();
-        List<String> listOfPosts=shareRequest.getSharePostsIds();
-
-        for (String postId : listOfPosts) {
-            callShareRequest(personId,postId);
+        String personId = shareRequest.getPersonId();
+        if (!ObjectUtils.isEmpty(shareRequest.getSharePostsIds())) {
+            for (String postId : shareRequest.getSharePostsIds()) {
+                callShareRequest(personId, postId);
+            }
         }
+        likePosts(shareRequest.getLikePostIds(), personId);
     }
 
 
-
-    private ResponseEntity<String> callShareRequest(String personId,String postId) {
+    private ResponseEntity<String> callShareRequest(String personId, String postId) {
 
         JsonObject request = Json.createObjectBuilder().
-                add("originalShare",postId )
-                .add("resharedShare",postId)
-                .add("owner", personId)
-                .add("text",(Json.createObjectBuilder()
+                add("originalShare", postId)
+                .add("resharedShare", postId)
+                .add("owner", "urn:li:person:" + personId)
+                .add("text", (Json.createObjectBuilder()
                         .add("text", ""))).build();
 
         HttpHeaders headers = new HttpHeaders();
@@ -262,7 +262,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
     }
 
     public void likePosts(List<String> postIds, String personId) throws Exception {
-        if (ObjectUtils.isEmpty(postIds)) {
+        if (!ObjectUtils.isEmpty(postIds)) {
             for (String postId : postIds) {
                 callLinkedInLikePost(postId, personId);
             }
@@ -277,35 +277,30 @@ public class LinkedInServicesImpl implements LinkedInServices {
                 headers.set("LinkedIn-Version", "202209");
                 LinkedInAuthDetails linkedInAuthDetails = linkedInAuthDetailsDAO.findByUserId(personId);
                 headers.setBearerAuth(getRefreshToken(linkedInAuthDetails));
-                Map<String, String> reqParam = new HashMap<>();
-                reqParam.put("", "");
-                reqParam.put("", "");
-                HttpEntity<String> entity = new HttpEntity<String>(mapper.writeValueAsString(reqParam), headers);
-
-                //HttpEntity<String> entity = generateHttpEntity();
-
+                JsonObject request = Json.createObjectBuilder().
+                        add("root", postId)
+                        .add("reactionType", "LIKE")
+                        .build();
+                HttpEntity<String> entity = new HttpEntity<String>(request.toString(), headers);
                 UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(LIKE_POST_URI)
-                        .queryParam("actor", "personId").encode();
-
-                String response = String.valueOf(restTemplate.exchange(builder.buildAndExpand().toUri(), HttpMethod.POST, entity, ResponseDto.class));
-                logger.info("Get Linked In Stories API response: {}", response);
+                        .queryParam("actor", "urn:li:person:" + personId).encode(StandardCharsets.UTF_8);
+                ResponseEntity<String> response = restTemplate.exchange(builder.build().toUri(), HttpMethod.POST, entity, String.class);
+                logger.info("Like LinkedIn API response: {}", response);
             } catch (URISyntaxException e) {
-                logger.error("Error while fetching Linked Stories from Master Table: {} : ", e.getMessage());
+                logger.error("Error while liking post  ", e.getMessage());
                 throw new RuntimeException();
             } catch (HttpClientErrorException e) {
                 if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                     // 404 = Patient not found, proceed without any errors
-                    logger.error("Error while fetching Linked Stories from Master Table: {} : ", e.getMessage());
+                    logger.error("Error while liking post ", e.getMessage());
                     throw e;
                 }
-
             } catch (Exception e) {
                 // 404 = Patient not found, proceed without any errors
-                logger.error("Error while fetching Linked Stories from Master Table: {} : ", e.getMessage());
+                logger.error("Error while liking post  ", e.getMessage());
                 throw e;
             }
         }
-
     }
 
 

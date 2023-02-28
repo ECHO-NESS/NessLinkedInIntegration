@@ -17,6 +17,8 @@ public class ActionRequest {
 
     private List<String> sharePostsIds;
 
+    private List<String> likePostIds;
+
 
 
 }

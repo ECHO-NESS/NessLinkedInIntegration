@@ -18,5 +18,5 @@ public interface LinkedInServices {
     
     void saveLinkedInStories();
 
-    void repost(ActionRequest shareRequest);
+    void repost(ActionRequest shareRequest) throws Exception;
 }
