@@ -1,5 +1,6 @@
 package com.linkedin.oauth.service;
 
+import com.linkedin.oauth.dto.ActionRequest;
 import com.linkedin.oauth.dto.ResponseDto;
 import com.linkedin.oauth.pojo.LinkedInMasterModel;
 
@@ -16,4 +17,6 @@ public interface LinkedInServices {
     ResponseEntity<ResponseDto> makeGetCall(Class<ResponseDto> responseDto);
     
     void saveLinkedInStories();
+
+    void repost(ActionRequest shareRequest);
 }

@@ -1,6 +1,7 @@
 package com.linkedin.oauth.serviceImpl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.linkedin.oauth.dto.ActionRequest;
 import com.linkedin.oauth.dto.PostStoryResponseDto;
 import com.linkedin.oauth.dto.ResponseDto;
 import com.linkedin.oauth.dto.TokenIntrospectionResponseDTO;
@@ -24,10 +25,13 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import javax.json.Json;
+import javax.json.JsonObject;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
 
+import static com.linkedin.oauth.LinkedInOAuthController.token;
 import static com.linkedin.oauth.util.LinkedInAPIConstants.*;
 
 @Service
@@ -168,6 +172,44 @@ public class LinkedInServicesImpl implements LinkedInServices {
         logger.info("Get API to fetch posted stories : ");
         List<LinkedInMasterModel> response = linkedInRepo.findAll();
         return response;
+    }
+
+
+
+    @Override
+    public void repost(ActionRequest shareRequest) {
+
+        String personId=shareRequest.getPersonId();
+        List<String> listOfPosts=shareRequest.getSharePostsIds();
+
+        for (String postId : listOfPosts) {
+            callShareRequest(personId,postId);
+        }
+    }
+
+
+
+    private ResponseEntity<String> callShareRequest(String personId,String postId) {
+
+        JsonObject request = Json.createObjectBuilder().
+                add("originalShare",postId )
+                .add("resharedShare",postId)
+                .add("owner", personId)
+                .add("text",(Json.createObjectBuilder()
+                        .add("text", ""))).build();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(token);
+        HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);
+        URI uri = null;
+        try {
+            uri = new URI(RE_SHARE_URL);
+            ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+        return ResponseEntity.ok(HttpStatus.OK.toString());
     }
 
     private List<LinkedInMasterModel> importDto(ResponseDto responseDto) {
