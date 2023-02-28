@@ -15,14 +15,20 @@ public final class AccessToken {
     private String accessToken;
 
     @JsonProperty(value = "expires_in")
-    private String expiresIn;
+    private int expiresIn;
 
     @JsonProperty(value = "refresh_token")
     private String refreshToken;
 
     @JsonProperty(value = "refresh_token_expires_in")
     //@Ignore
-    private String refreshTokenExpiresIn;
+    private int refreshTokenExpiresIn;
+
+    @JsonProperty(value = "scope")
+    //@Ignore
+    private String scope;
+
+    private String personId;
 
     public AccessToken() {
     }
@@ -31,7 +37,7 @@ public final class AccessToken {
         return accessToken;
     }
 
-    public String getExpiresIn() {
+    public int getExpiresIn() {
         return expiresIn;
     }
 
@@ -39,7 +45,7 @@ public final class AccessToken {
         this.accessToken = accessToken;
     }
 
-    public void setExpiresIn(final String expiresIn) {
+    public void setExpiresIn(final int expiresIn) {
         this.expiresIn = expiresIn;
     }
 
@@ -51,11 +57,23 @@ public final class AccessToken {
         this.refreshToken = refreshToken;
     }
 
-    public String getRefreshTokenExpiresIn() {
+    public int getRefreshTokenExpiresIn() {
         return refreshTokenExpiresIn;
     }
 
-    public void setRefreshTokenExpiresIn(final String refreshTokenExpiresIn) {
+    public void setRefreshTokenExpiresIn(final int refreshTokenExpiresIn) {
         this.refreshTokenExpiresIn = refreshTokenExpiresIn;
     }
+
+    public String getScope() {
+        return scope;
+    }
+
+    public void setScope(String scope) {
+        this.scope = scope;
+    }
+
+    public String getPersonId() { return personId; }
+
+    public void setPersonId(String personId) { this.personId = personId; }
 }

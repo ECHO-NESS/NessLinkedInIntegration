@@ -22,7 +22,7 @@ public class LinkedInController {
     LinkedInServices linkedInServices;
 
     @GetMapping(value = "/posts")
-    @ResponseBody
+    @ResponseBody // take from db
     public List<LinkedInMasterModel> getAllStories(){
         return linkedInServices.getAllStories();
     }

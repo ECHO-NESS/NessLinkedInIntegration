@@ -33,10 +33,10 @@ public class LinkedInAuthDetails {
     @Column(name = "updated_at")
     private Date updatedAt;
 
-    @Column(name = "access_token")
+    @Column(name = "access_token", length = 400)
     private String accessToken;
 
-    @Column(name = "refresh_token")
+    @Column(name = "refresh_token", length = 400)
     private String refreshToken;
 
     @Column(name = "refresh_token_exp_in")

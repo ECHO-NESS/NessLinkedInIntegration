@@ -10,11 +10,19 @@ import static com.linkedin.oauth.util.Constants.TOKEN_INTROSPECTION_URL;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Date;
 import java.util.Properties;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.linkedin.oauth.pojo.LinkedInAuthDetails;
+import com.linkedin.oauth.pojo.ProfileDetails;
+import com.linkedin.oauth.repository.LinkedInAuthDetailsDAO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
@@ -49,13 +57,16 @@ import com.linkedin.oauth.service.LinkedInOAuthService;
 		"http://localhost:8080" }, allowedHeaders = "Requestor-Type")
 public final class LinkedInOAuthController {
 
-	@Bean
+/*	@Bean
 	public RestTemplate restTemplate(final RestTemplateBuilder builder) {
 		return builder.build();
-	}
+	}*/
 
 	@Autowired
 	private RestTemplate restTemplate;
+
+	@Autowired
+	LinkedInAuthDetailsDAO linkedInAuthDetailsDAO;
 
 	// Define all inputs in the property file
 	private Properties prop = new Properties();
@@ -117,9 +128,10 @@ public final class LinkedInOAuthController {
 	}
 
 	@PostMapping(value = "/getToken")
-	public String oauthToken(@RequestParam(name = "code", required = false) final String code)
+	public AccessToken oauthToken(@RequestParam(name = "code", required = false) final String code)
 			throws Exception {
 		String response =null;
+		AccessToken[] accessToken = { new AccessToken() };
 		loadProperty();
 		service = new LinkedInOAuthService.LinkedInOAuthServiceBuilder().apiKey(prop.getProperty("clientId"))
 				.apiSecret(prop.getProperty("clientSecret"))
@@ -133,17 +145,49 @@ public final class LinkedInOAuthController {
 
 			logger.log(Level.INFO, "Authorization code not empty, trying to generate a 3-legged OAuth token.");
 
-			final AccessToken[] accessToken = { new AccessToken() };
+
 			HttpEntity request = service.getAccessToken3Legged(code);
 			response = restTemplate.postForObject(REQUEST_TOKEN_URL, request, String.class);
-			
-			/*
-			 * accessToken[0] = service.convertJsonTokenToPojo(response);
-			 * 
-			 * prop.setProperty("token", accessToken[0].getAccessToken()); token =
-			 * accessToken[0].getAccessToken(); refresh_token =
-			 * accessToken[0].getRefreshToken();
-			 */
+
+
+			//todo
+
+			  accessToken[0] = service.convertJsonTokenToPojo(response);
+
+			  prop.setProperty("token", accessToken[0].getAccessToken()); token =
+			  accessToken[0].getAccessToken(); refresh_token =
+			  accessToken[0].getRefreshToken();
+
+			ProfileDetails profileDetails=new ProfileDetails();
+			String profileInfo=profile();
+			profileDetails=service.convertJsonToPojo(profileInfo);
+
+			LinkedInAuthDetails linkedInAuthDetails= linkedInAuthDetailsDAO.findByFirstNameAndLastName(profileDetails.getFirst_name(),profileDetails.getLast_name());
+
+			if(linkedInAuthDetails==null){
+				 linkedInAuthDetails=new LinkedInAuthDetails();
+				linkedInAuthDetails.setUserId(profileDetails.getId());
+				linkedInAuthDetails.setFirstName(profileDetails.getFirst_name());
+				linkedInAuthDetails.setLastName(profileDetails.getLast_name());
+				linkedInAuthDetails.setAccessToken(accessToken[0].getAccessToken());
+				linkedInAuthDetails.setAccessTokenExpireIn(accessToken[0].getExpiresIn());
+				linkedInAuthDetails.setRefreshToken(accessToken[0].getRefreshToken());
+				linkedInAuthDetails.setRefreshTokenExpirein(accessToken[0].getRefreshTokenExpiresIn());
+				linkedInAuthDetails.setScope(accessToken[0].getScope());
+				linkedInAuthDetails.setCreatedAt(getCurrentDate());
+			}else {
+				linkedInAuthDetails.setUserId(profileDetails.getId());
+				linkedInAuthDetails.setFirstName(profileDetails.getFirst_name());
+				linkedInAuthDetails.setLastName(profileDetails.getLast_name());
+				linkedInAuthDetails.setAccessToken(accessToken[0].getAccessToken());
+				linkedInAuthDetails.setAccessTokenExpireIn(accessToken[0].getExpiresIn());
+				linkedInAuthDetails.setRefreshToken(accessToken[0].getRefreshToken());
+				linkedInAuthDetails.setRefreshTokenExpirein(accessToken[0].getRefreshTokenExpiresIn());
+				linkedInAuthDetails.setScope(accessToken[0].getScope());
+				linkedInAuthDetails.setCreatedAt(getCurrentDate());
+			}
+			linkedInAuthDetailsDAO.save(linkedInAuthDetails);
+			accessToken[0].setPersonId(profileDetails.getId());
 
 			logger.log(Level.INFO, "Generated Access token and Refresh Token.");
 
@@ -153,7 +197,7 @@ public final class LinkedInOAuthController {
 		// redirectView.setAttributesMap("token")
 
 		System.out.println(response.toString());
-		return response;
+		return accessToken[0];
 	}
 
 	public HttpEntity getAuthCode() throws IOException {
@@ -264,5 +308,12 @@ public final class LinkedInOAuthController {
 		} else {
 			throw new FileNotFoundException("property file '" + propFileName + "' not found in the classpath");
 		}
+	}
+
+	private Date getCurrentDate() throws ParseException {
+		Date date=new Date();
+		SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+		String currentDate=formatter.format(date);
+		return date=formatter.parse(currentDate);
 	}
 }

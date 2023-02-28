@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linkedin.oauth.builder.AuthorizationUrlBuilder;
 import com.linkedin.oauth.builder.ScopeBuilder;
 import com.linkedin.oauth.pojo.AccessToken;
+import com.linkedin.oauth.pojo.ProfileDetails;
 import com.linkedin.oauth.util.Preconditions;
 
 
@@ -27,6 +28,7 @@ public final class LinkedInOAuthService {
     private final String apiKey;
     private final String apiSecret;
     private final String scope;
+
 
     private LinkedInOAuthService(final LinkedInOAuthServiceBuilder oauthServiceBuilder) {
         this.redirectUri = oauthServiceBuilder.redirectUri;
@@ -192,5 +194,11 @@ public final class LinkedInOAuthService {
             return baseService;
         }
     }
+
+    public ProfileDetails convertJsonToPojo(final String profileDetails) throws IOException {
+        return new ObjectMapper().readValue(profileDetails, ProfileDetails.class);
+    }
+
+
 
 }
