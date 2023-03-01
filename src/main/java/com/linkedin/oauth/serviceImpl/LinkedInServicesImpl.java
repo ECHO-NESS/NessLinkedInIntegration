@@ -180,8 +180,8 @@ public class LinkedInServicesImpl implements LinkedInServices {
     public void repost(ActionRequest shareRequest) throws Exception {
 
         String personId = shareRequest.getPersonId();
-        if (!ObjectUtils.isEmpty(shareRequest.getSharePostsIds())) {
-            for (String postId : shareRequest.getSharePostsIds()) {
+        if (!ObjectUtils.isEmpty(shareRequest.getSharePostIds())) {
+            for (String postId : shareRequest.getSharePostIds()) {
                 callShareRequest(personId, postId);
             }
         }

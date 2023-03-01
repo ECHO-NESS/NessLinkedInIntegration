@@ -28,6 +28,7 @@ public final class AccessToken {
     //@Ignore
     private String scope;
 
+    @JsonProperty(value = "person_id")
     private String personId;
 
     public AccessToken() {

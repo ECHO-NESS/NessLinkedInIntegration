@@ -15,7 +15,7 @@ import java.util.List;
 public class ActionRequest {
     private String personId;
 
-    private List<String> sharePostsIds;
+    private List<String> sharePostIds;
 
     private List<String> likePostIds;
 
