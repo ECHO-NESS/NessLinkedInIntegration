@@ -189,7 +189,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
     }
 
 
-    private ResponseEntity<String> callShareRequest(String personId, String postId) {
+    private void callShareRequest(String personId, String postId) throws Exception {
 
         JsonObject request = Json.createObjectBuilder().
                 add("originalShare", postId)
@@ -202,14 +202,22 @@ public class LinkedInServicesImpl implements LinkedInServices {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(token);
         HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);
+        logger.info("Request of re-share api: "+entity);
         URI uri = null;
         try {
             uri = new URI(RE_SHARE_URL);
             ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
+            logger.info("Re-share API response :" + response);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
+        } catch (HttpClientErrorException e) {
+            logger.error("Error while re-share post ", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            logger.error("Error while re-share post ", e.getMessage());
+            throw e;
         }
-        return ResponseEntity.ok(HttpStatus.OK.toString());
+
     }
 
     private List<LinkedInMasterModel> importDto(ResponseDto responseDto) {

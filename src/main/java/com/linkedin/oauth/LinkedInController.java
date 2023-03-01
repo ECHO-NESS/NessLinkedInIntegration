@@ -39,7 +39,7 @@ public class LinkedInController {
         linkedInServices.saveLinkedInStories();
     }
 
-    @PostMapping(value = "/rePost")
+    @PostMapping(value = "/postAction")
     public ResponseEntity<String> rePost(@RequestBody(required = true) ActionRequest shareRequest)  {
         try {
             linkedInServices.repost(shareRequest);
