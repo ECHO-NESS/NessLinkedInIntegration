@@ -180,12 +180,13 @@ public class LinkedInServicesImpl implements LinkedInServices {
     public void repost(ActionRequest shareRequest) throws Exception {
 
         String personId = shareRequest.getPersonId();
+        likePosts(shareRequest.getLikePostIds(), personId);
+
         if (!ObjectUtils.isEmpty(shareRequest.getSharePostIds())) {
             for (String postId : shareRequest.getSharePostIds()) {
                 callShareRequest(personId, postId);
             }
         }
-        likePosts(shareRequest.getLikePostIds(), personId);
     }
 
 
@@ -197,10 +198,10 @@ public class LinkedInServicesImpl implements LinkedInServices {
                 .add("owner", "urn:li:person:" + personId)
                 .add("text", (Json.createObjectBuilder()
                         .add("text", ""))).build();
-
+        LinkedInAuthDetails linkedInAuthDetails = linkedInAuthDetailsDAO.findByUserId(personId);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(token);
+        headers.setBearerAuth(getRefreshToken(linkedInAuthDetails));
         HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);
         logger.info("Request of re-share api: "+entity);
         URI uri = null;
