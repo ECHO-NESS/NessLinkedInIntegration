@@ -3,6 +3,8 @@ package com.linkedin.oauth;
 import java.util.List;
 
 import com.linkedin.oauth.dto.ActionRequest;
+import com.linkedin.oauth.dto.PostActionDTO;
+import com.linkedin.oauth.dto.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,12 +42,16 @@ public class LinkedInController {
     }
 
     @PostMapping(value = "/postAction")
-    public ResponseEntity<String> rePost(@RequestBody(required = true) ActionRequest shareRequest)  {
+    public ResponseEntity<Object> postAction(@RequestBody(required = true) ActionRequest shareRequest)  {
         try {
-            linkedInServices.repost(shareRequest);
-            return ResponseEntity.ok(HttpStatus.OK.toString());
+            PostActionDTO response = linkedInServices.postAction(shareRequest);
+            Response responseDto = new Response();
+            responseDto.setMessage(response.getMessage());
+            responseDto.setStatusCode(HttpStatus.OK.value());
+            responseDto.setStatus("SUCCESS");
+            return new ResponseEntity<>(responseDto,HttpStatus.OK);
         }catch (Exception e){
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(e.getMessage(),HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     

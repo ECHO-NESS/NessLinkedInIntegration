@@ -1,10 +1,7 @@
 package com.linkedin.oauth.serviceImpl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.linkedin.oauth.dto.ActionRequest;
-import com.linkedin.oauth.dto.PostStoryResponseDto;
-import com.linkedin.oauth.dto.ResponseDto;
-import com.linkedin.oauth.dto.TokenIntrospectionResponseDTO;
+import com.linkedin.oauth.dto.*;
 import com.linkedin.oauth.pojo.AccessToken;
 import com.linkedin.oauth.pojo.LinkedInAuthDetails;
 import com.linkedin.oauth.pojo.LinkedInMasterModel;
@@ -13,6 +10,7 @@ import com.linkedin.oauth.repository.LinkedInRepo;
 import com.linkedin.oauth.service.LinkedInOAuthServiceCall;
 import com.linkedin.oauth.service.LinkedInServices;
 import com.linkedin.oauth.util.DateUtil;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -177,51 +175,85 @@ public class LinkedInServicesImpl implements LinkedInServices {
 
 
     @Override
-    public void repost(ActionRequest shareRequest) throws Exception {
-
+    public PostActionDTO postAction(ActionRequest shareRequest) throws Exception {
+        PostActionDTO postActionDTO = new PostActionDTO();
         String personId = shareRequest.getPersonId();
-        likePosts(shareRequest.getLikePostIds(), personId);
-        if (!ObjectUtils.isEmpty(shareRequest.getSharePostIds())) {
-            for (String postId : shareRequest.getSharePostIds()) {
-
-                if(postId.contains("share")){
-                    callShareRequest(personId, postId);
-                }else if(postId.contains("ugcPost")){
-                    callUgcPostRequest(personId,postId);
+        String msg = null;
+        if (!ObjectUtils.isEmpty(shareRequest.getLikePostIds())) {
+            for (String postId : shareRequest.getLikePostIds()) {
+                try {
+                    callLinkedInLikePost(postId, personId);
+                    postActionDTO.addLikePostIds(postId);
+                } catch (Exception e) {
+                    logger.info("[ERROR]: postAction(): error while liking linkedin post postid:{}, personId:{}", postId, personId);
+                    logger.error("[ERROR]: postAction(): error while liking linkedin post ", e);
+                    postActionDTO.addFailedLikePostIds(postId);
                 }
             }
         }
+        if (!ObjectUtils.isEmpty(shareRequest.getSharePostIds())) {
+            for (String postId : shareRequest.getSharePostIds()) {
+                try {
+                    if (postId.contains("share")) {
+                        callShareRequest(personId, postId);
+                    } else if (postId.contains("ugcPost")) {
+                        // callUgcPostRequest(personId,postId);
+                    }
+                    postActionDTO.addSharePostIds(postId);
+                } catch (Exception e) {
+                    logger.info("[ERROR]: postAction(): error while sharing linkedin post postid:{}, personId:{}", postId, personId, e);
+                    logger.error("[ERROR]: postAction(): error while sharing linkedin post ", e);
+                    postActionDTO.addFailedSharePostIds(postId);
+                }
+            }
+        }
+        if (ObjectUtils.isEmpty(postActionDTO.getFailedLikePostIds()) && ObjectUtils.isEmpty(postActionDTO.getFailedSharePostIds())) {
+            msg = "All post shared and/Or liked Successful";
+        } else if (!ObjectUtils.isEmpty(postActionDTO.getFailedLikePostIds()) && ObjectUtils.isEmpty(postActionDTO.getFailedSharePostIds())) {
+            msg = "All Post liked and shared successfully except postIDs:" + postActionDTO.getFailedLikePostIds() + " not liked";
+        } else if (!ObjectUtils.isEmpty(postActionDTO.getFailedSharePostIds()) && ObjectUtils.isEmpty(postActionDTO.getFailedLikePostIds())) {
+            msg = "All Post liked and shared successfully except postIDs:" + postActionDTO.getFailedSharePostIds() + " not shared";
+        } else {
+            msg = "All Post liked and shared successfully except postIDs:" + postActionDTO.getFailedLikePostIds() + " not liked and postIds : " + postActionDTO.getFailedSharePostIds() + "not shared.";
+        }
+        postActionDTO.setMessage(msg);
+        return postActionDTO;
     }
 
-    private void callUgcPostRequest(String personId, String postId){
+    private void callUgcPostRequest(String personId, String postId) throws Exception {
         JsonObject request = Json.createObjectBuilder().
                 add("lifecycleState", "PUBLISHED")
-                .add("visibility",(Json.createObjectBuilder())
-                        .add("com.linkedin.ugc.MemberNetworkVisibility","PUBLIC"))
-                        .add("specificContent",(Json.createObjectBuilder()
-                                .add("com.linkedin.ugc.ShareContent",(Json.createObjectBuilder()
-                                        .add("shareMediaCategory","NONE")
-                                        .add("shareCommentary",(Json.createObjectBuilder()
-                                                .add("text","")))))))
-                        .add("author","urn:li:person:"+personId)
-                        .add("responseContext",(Json.createObjectBuilder()
-                                .add("parent",postId))).build();
+                .add("visibility", (Json.createObjectBuilder())
+                        .add("com.linkedin.ugc.MemberNetworkVisibility", "PUBLIC"))
+                .add("specificContent", (Json.createObjectBuilder()
+                        .add("com.linkedin.ugc.ShareContent", (Json.createObjectBuilder()
+                                .add("shareMediaCategory", "NONE")
+                                .add("shareCommentary", (Json.createObjectBuilder()
+                                        .add("text", "")))))))
+                .add("author", "urn:li:person:" + personId)
+                .add("responseContext", (Json.createObjectBuilder()
+                        .add("parent", postId))).build();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(token);
         HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);
-        logger.info("Request of ugcPost api: "+entity);
+        logger.info("Request of ugcPost api: " + entity);
 
         URI uri = null;
         try {
             uri = new URI(UGC_POST_URL);
-            ResponseEntity <String>  response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
+            ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
             logger.info("ugc Post API response :" + response);
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                JSONObject obj = new JSONObject(response.getBody());
+                logger.error("Error while resharing post :- {}, response:{}", postId, obj.get("message"));
+                throw new Exception("error while resharing post :" + postId);
+            }
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         } catch (HttpClientErrorException e) {
-            logger.error("Error while ugcPost API",e);
+            logger.error("Error while ugcPost API", e);
             throw e;
         } catch (Exception e) {
             logger.error("Error while rugcPost API ", e.getMessage());
@@ -231,7 +263,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
 
 
     private void callShareRequest(String personId, String postId) throws Exception {
-
+        ObjectMapper mapper = new ObjectMapper();
         JsonObject request = Json.createObjectBuilder().
                 add("originalShare", postId)
                 .add("resharedShare", postId)
@@ -243,12 +275,17 @@ public class LinkedInServicesImpl implements LinkedInServices {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(token);
         HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);
-        logger.info("Request of re-share api: "+entity);
+        logger.info("Request of re-share api: " + entity);
         URI uri = null;
         try {
             uri = new URI(RE_SHARE_URL);
             ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
             logger.info("Re-share API response :" + response);
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                JSONObject obj = new JSONObject(response.getBody());
+                logger.error("Error while resharing post :- {}, response:{}", postId, obj.get("message"));
+                throw new Exception("error while resharing post :" + postId);
+            }
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         } catch (HttpClientErrorException e) {
@@ -310,14 +347,6 @@ public class LinkedInServicesImpl implements LinkedInServices {
         return linkedInMasterModels;
     }
 
-    public void likePosts(List<String> postIds, String personId) throws Exception {
-        if (!ObjectUtils.isEmpty(postIds)) {
-            for (String postId : postIds) {
-                callLinkedInLikePost(postId, personId);
-            }
-        }
-    }
-
     private void callLinkedInLikePost(String postId, String personId) throws Exception {
         {
             try {
@@ -335,18 +364,23 @@ public class LinkedInServicesImpl implements LinkedInServices {
                         .queryParam("actor", "urn:li:person:" + personId).encode(StandardCharsets.UTF_8);
                 ResponseEntity<String> response = restTemplate.exchange(builder.build().toUri(), HttpMethod.POST, entity, String.class);
                 logger.info("Like LinkedIn API response: {}", response);
+                if (!response.getStatusCode().is2xxSuccessful()) {
+                    JSONObject obj = new JSONObject(response.getBody());
+                    logger.error("Error while liking post :- {}, response:{}", postId, obj.get("message"));
+                    throw new Exception("error while liking post :" + postId);
+                }
             } catch (URISyntaxException e) {
-                logger.error("Error while liking post  ", e.getMessage());
+                logger.error("Error while liking post  ", e);
                 throw new RuntimeException();
             } catch (HttpClientErrorException e) {
                 if (HttpStatus.NOT_FOUND.equals(e.getStatusCode())) {
                     // 404 = Patient not found, proceed without any errors
-                    logger.error("Error while liking post ", e.getMessage());
+                    logger.error("Error while liking post ", e);
                     throw e;
                 }
             } catch (Exception e) {
                 // 404 = Patient not found, proceed without any errors
-                logger.error("Error while liking post  ", e.getMessage());
+                logger.error("Error while liking post  ", e);
                 throw e;
             }
         }
