@@ -197,7 +197,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
                     if (postId.contains("share")) {
                         callShareRequest(personId, postId);
                     } else if (postId.contains("ugcPost")) {
-                        // callUgcPostRequest(personId,postId);
+                         callUgcPostRequest(personId,postId);
                     }
                     postActionDTO.addSharePostIds(postId);
                 } catch (Exception e) {
