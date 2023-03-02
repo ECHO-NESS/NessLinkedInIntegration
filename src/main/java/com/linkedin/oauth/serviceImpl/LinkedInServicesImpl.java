@@ -183,8 +183,49 @@ public class LinkedInServicesImpl implements LinkedInServices {
         likePosts(shareRequest.getLikePostIds(), personId);
         if (!ObjectUtils.isEmpty(shareRequest.getSharePostIds())) {
             for (String postId : shareRequest.getSharePostIds()) {
-                callShareRequest(personId, postId);
+
+                if(postId.contains("share")){
+                    callShareRequest(personId, postId);
+                }else if(postId.contains("ugcPost")){
+                    callUgcPostRequest(personId,postId);
+                }
             }
+        }
+    }
+
+    private void callUgcPostRequest(String personId, String postId){
+        JsonObject request = Json.createObjectBuilder().
+                add("lifecycleState", "PUBLISHED")
+                .add("visibility",(Json.createObjectBuilder())
+                        .add("com.linkedin.ugc.MemberNetworkVisibility","PUBLIC"))
+                        .add("specificContent",(Json.createObjectBuilder()
+                                .add("com.linkedin.ugc.ShareContent",(Json.createObjectBuilder()
+                                        .add("shareMediaCategory","NONE")
+                                        .add("shareCommentary",(Json.createObjectBuilder()
+                                                .add("text","")))))))
+                        .add("author","urn:li:person:"+personId)
+                        .add("responseContext",(Json.createObjectBuilder()
+                                .add("parent",postId))).build();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(token);
+        HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);
+        logger.info("Request of ugcPost api: "+entity);
+
+        URI uri = null;
+        try {
+            uri = new URI(UGC_POST_URL);
+            ResponseEntity <String>  response = restTemplate.exchange(uri, HttpMethod.POST, entity, String.class);
+            logger.info("ugc Post API response :" + response);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        } catch (HttpClientErrorException e) {
+            logger.error("Error while ugcPost API",e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Error while rugcPost API ", e.getMessage());
+            throw e;
         }
     }
 

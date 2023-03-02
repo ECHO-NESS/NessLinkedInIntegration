@@ -4,6 +4,8 @@ public class LinkedInAPIConstants {
 
     public static final String BASE_URL = "https://api.linkedin.com/rest/posts?";
     public static final String RE_SHARE_URL = "https://api.linkedin.com/v2/shares";
+
+    public static final String UGC_POST_URL="https://api.linkedin.com/v2/ugcPosts";
     public static final String LIKE_POST_URI = "https://api.linkedin.com/rest/reactions";
 
     public static final String Q = "author";
