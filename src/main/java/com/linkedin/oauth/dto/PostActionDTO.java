@@ -9,39 +9,39 @@ import java.util.List;
 @Data
 public class PostActionDTO {
 
-    private List<String> likePostIds;
+    private List<String> likedPosts;
 
-    private List<String> failedLikePostIds;
+    private List<String> failedLikePosts;
 
-    private List<String> sharePostIds;
+    private List<String> sharedPosts;
 
-    private List<String> failedSharePostIds;
+    private List<String> failedSharePosts;
 
     private String message;
 
 
-    public void addLikePostIds(String postId) {
-        if (ObjectUtils.isEmpty(this.likePostIds))
-            this.likePostIds = new ArrayList<>();
-        this.likePostIds.add(postId);
+    public void addLikedPosts(String post) {
+        if (ObjectUtils.isEmpty(this.likedPosts))
+            this.likedPosts = new ArrayList<>();
+        this.likedPosts.add(post);
     }
 
-    public void addFailedLikePostIds(String postId) {
-        if (ObjectUtils.isEmpty(this.failedLikePostIds))
-            this.failedLikePostIds = new ArrayList<>();
-        this.failedLikePostIds.add(postId);
+    public void addFailedLikePosts(String post) {
+        if (ObjectUtils.isEmpty(this.failedLikePosts))
+            this.failedLikePosts = new ArrayList<>();
+        this.failedLikePosts.add(post);
     }
 
-    public void addSharePostIds(String postId) {
-        if (ObjectUtils.isEmpty(this.sharePostIds))
-            this.sharePostIds = new ArrayList<>();
-        this.sharePostIds.add(postId);
+    public void addSharePosts(String post) {
+        if (ObjectUtils.isEmpty(this.sharedPosts))
+            this.sharedPosts = new ArrayList<>();
+        this.sharedPosts.add(post);
     }
 
-    public void addFailedSharePostIds(String postId) {
-        if (ObjectUtils.isEmpty(this.failedSharePostIds))
-            this.failedSharePostIds = new ArrayList<>();
-        this.failedSharePostIds.add(postId);
+    public void addFailedSharePosts(String post) {
+        if (ObjectUtils.isEmpty(this.failedSharePosts))
+            this.failedSharePosts = new ArrayList<>();
+        this.failedSharePosts.add(post);
     }
 
 

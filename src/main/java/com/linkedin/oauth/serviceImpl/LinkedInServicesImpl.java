@@ -180,47 +180,53 @@ public class LinkedInServicesImpl implements LinkedInServices {
         String personId = shareRequest.getPersonId();
         String msg = null;
         if (!ObjectUtils.isEmpty(shareRequest.getLikePostIds())) {
-            for (String postId : shareRequest.getLikePostIds()) {
+            for (LikePostReqDTO likepost : shareRequest.getLikePostIds()) {
                 try {
-                    callLinkedInLikePost(postId, personId);
-                    postActionDTO.addLikePostIds(postId);
+                    callLinkedInLikePost(likepost.getPostId(),personId);
+                    postActionDTO.addLikedPosts(likepost.getPostId());
                 } catch (Exception e) {
-                    logger.info("[ERROR]: postAction(): error while liking linkedin post postid:{}, personId:{}", postId, personId);
+                    logger.info("[ERROR]: postAction(): error while liking linkedin post postid:{}, personId:{}", likepost.getPostId(), personId);
                     logger.error("[ERROR]: postAction(): error while liking linkedin post ", e);
-                    postActionDTO.addFailedLikePostIds(postId);
+                    postActionDTO.addFailedLikePosts(likepost.getTitle());
                 }
             }
         }
         if (!ObjectUtils.isEmpty(shareRequest.getSharePostIds())) {
-            for (String postId : shareRequest.getSharePostIds()) {
+            for (SharePostReqDTO sharePost : shareRequest.getSharePostIds()) {
                 try {
-                    if (postId.contains("share")) {
-                        callShareRequest(personId, postId);
-                    } else if (postId.contains("ugcPost")) {
-                         callUgcPostRequest(personId,postId);
+                    if (sharePost.getPostId().contains("share")) {
+                        callShareRequest(personId, sharePost.getPostId(), sharePost.getComment());
+                    } else if (sharePost.getPostId().contains("ugcPost")) {
+                         callUgcPostRequest(personId,sharePost.getPostId(), sharePost.getComment());
                     }
-                    postActionDTO.addSharePostIds(postId);
+                    postActionDTO.addSharePosts(sharePost.getPostId());
                 } catch (Exception e) {
-                    logger.info("[ERROR]: postAction(): error while sharing linkedin post postid:{}, personId:{}", postId, personId, e);
+                    logger.info("[ERROR]: postAction(): error while sharing linkedin post postid:{}, personId:{}", sharePost.getPostId(), personId, e);
                     logger.error("[ERROR]: postAction(): error while sharing linkedin post ", e);
-                    postActionDTO.addFailedSharePostIds(postId);
+                    postActionDTO.addFailedSharePosts(sharePost.getTitle());
                 }
             }
         }
-        if (ObjectUtils.isEmpty(postActionDTO.getFailedLikePostIds()) && ObjectUtils.isEmpty(postActionDTO.getFailedSharePostIds())) {
-            msg = "All post shared and/Or liked Successful";
-        } else if (!ObjectUtils.isEmpty(postActionDTO.getFailedLikePostIds()) && ObjectUtils.isEmpty(postActionDTO.getFailedSharePostIds())) {
-            msg = "All Post liked and shared successfully except postIDs:" + postActionDTO.getFailedLikePostIds() + " not liked";
-        } else if (!ObjectUtils.isEmpty(postActionDTO.getFailedSharePostIds()) && ObjectUtils.isEmpty(postActionDTO.getFailedLikePostIds())) {
-            msg = "All Post liked and shared successfully except postIDs:" + postActionDTO.getFailedSharePostIds() + " not shared";
-        } else {
-            msg = "All Post liked and shared successfully except postIDs:" + postActionDTO.getFailedLikePostIds() + " not liked and postIds : " + postActionDTO.getFailedSharePostIds() + "not shared.";
-        }
+         msg = prepareMsgString(postActionDTO);
         postActionDTO.setMessage(msg);
         return postActionDTO;
     }
 
-    private void callUgcPostRequest(String personId, String postId) throws Exception {
+    private String prepareMsgString(PostActionDTO postActionDTO) {
+        String msg = null;
+        if (ObjectUtils.isEmpty(postActionDTO.getFailedLikePosts()) && ObjectUtils.isEmpty(postActionDTO.getFailedSharePosts())) {
+            msg = "All post shared and/Or liked Successful";
+        } else if (!ObjectUtils.isEmpty(postActionDTO.getFailedLikePosts()) && ObjectUtils.isEmpty(postActionDTO.getFailedSharePosts())) {
+            msg = "All Post liked and shared successfully except postIDs:" + postActionDTO.getFailedLikePosts() + " not liked";
+        } else if (!ObjectUtils.isEmpty(postActionDTO.getFailedSharePosts()) && ObjectUtils.isEmpty(postActionDTO.getFailedLikePosts())) {
+            msg = "All Post liked and shared successfully except postIDs:" + postActionDTO.getFailedSharePosts() + " not shared";
+        } else {
+            msg = "All Post liked and shared successfully except postIDs:" + postActionDTO.getFailedLikePosts() + " not liked and postIds : " + postActionDTO.getFailedSharePosts() + "not shared.";
+        }
+        return msg;
+    }
+
+    private void callUgcPostRequest(String personId, String postId, String comment) throws Exception {
         JsonObject request = Json.createObjectBuilder().
                 add("lifecycleState", "PUBLISHED")
                 .add("visibility", (Json.createObjectBuilder())
@@ -229,7 +235,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
                         .add("com.linkedin.ugc.ShareContent", (Json.createObjectBuilder()
                                 .add("shareMediaCategory", "NONE")
                                 .add("shareCommentary", (Json.createObjectBuilder()
-                                        .add("text", "")))))))
+                                        .add("text", comment!=null?comment:"")))))))
                 .add("author", "urn:li:person:" + personId)
                 .add("responseContext", (Json.createObjectBuilder()
                         .add("parent", postId))).build();
@@ -262,14 +268,14 @@ public class LinkedInServicesImpl implements LinkedInServices {
     }
 
 
-    private void callShareRequest(String personId, String postId) throws Exception {
+    private void callShareRequest(String personId, String postId, String comment) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         JsonObject request = Json.createObjectBuilder().
                 add("originalShare", postId)
                 .add("resharedShare", postId)
                 .add("owner", "urn:li:person:" + personId)
                 .add("text", (Json.createObjectBuilder()
-                        .add("text", ""))).build();
+                        .add("text", comment!=null?comment:""))).build();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
