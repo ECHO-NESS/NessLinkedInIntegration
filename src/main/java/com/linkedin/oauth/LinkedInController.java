@@ -43,15 +43,18 @@ public class LinkedInController {
 
     @PostMapping(value = "/postAction")
     public ResponseEntity<Object> postAction(@RequestBody(required = true) ActionRequest shareRequest)  {
+        Response responseDto = new Response();
         try {
             PostActionDTO response = linkedInServices.postAction(shareRequest);
-            Response responseDto = new Response();
             responseDto.setMessage(response.getMessage());
             responseDto.setStatusCode(HttpStatus.OK.value());
             responseDto.setStatus("SUCCESS");
             return new ResponseEntity<>(responseDto,HttpStatus.OK);
         }catch (Exception e){
-            return new ResponseEntity<>(e.getMessage(),HttpStatus.INTERNAL_SERVER_ERROR);
+            responseDto.setMessage("Internal Server Error, Please try again");
+            responseDto.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
+            responseDto.setStatus("ERROR");
+            return new ResponseEntity<>(responseDto,HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     
