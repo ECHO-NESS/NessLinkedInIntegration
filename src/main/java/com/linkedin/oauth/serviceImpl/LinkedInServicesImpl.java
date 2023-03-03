@@ -336,8 +336,16 @@ public class LinkedInServicesImpl implements LinkedInServices {
                     linkedInMasterModel.setTitle(dto.getContent().getArticle().getTitle());
                 }
             }
+            //clean up post while getting from linkedIn
+            String commentary=dto.getCommentary();
+            String removeURnString=commentary.replaceAll("\\([^()]*\\)", "");
+            String removeSquareBrackets= removeURnString.replaceAll("\\[", "").replaceAll("\\]","");
+            String removeCurlyBrackets= removeSquareBrackets.replaceAll("\\{", "").replaceAll("\\}","");
+            String removeHashtag=removeCurlyBrackets.replace("hashtag|\\#|","#");
 
-            linkedInMasterModel.setCommentary(dto.getCommentary());
+            String finalString=removeHashtag.replace("\\|","");
+
+            linkedInMasterModel.setCommentary(finalString);
             if (Objects.nonNull(dto.getLifecycleStateInfoDto().getEditable())) {
                 linkedInMasterModel.setEditedByAuthor(DateUtil.convertStringToBoolean(dto.getLifecycleStateInfoDto().getEditable()));
             }
