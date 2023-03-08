@@ -1,50 +1,38 @@
 package com.linkedin.oauth;
 
-import static com.linkedin.oauth.Constants.LI_ME_ENDPOINT;
-import static com.linkedin.oauth.Constants.TOKEN_INTROSPECTION_ERROR_MESSAGE;
-import static com.linkedin.oauth.Constants.USER_AGENT_OAUTH_VALUE;
-import static com.linkedin.oauth.util.Constants.REDIRECT_URI;
-import static com.linkedin.oauth.util.Constants.REQUEST_TOKEN_URL;
-import static com.linkedin.oauth.util.Constants.TOKEN_INTROSPECTION_URL;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.Date;
-import java.util.Properties;
-import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
+import com.linkedin.oauth.builder.ScopeBuilder;
+import com.linkedin.oauth.dto.TokenIntrospectionResponseDTO;
+import com.linkedin.oauth.pojo.AccessToken;
 import com.linkedin.oauth.pojo.LinkedInAuthDetails;
 import com.linkedin.oauth.pojo.ProfileDetails;
 import com.linkedin.oauth.repository.LinkedInAuthDetailsDAO;
+import com.linkedin.oauth.service.LinkedInOAuthService;
+import com.linkedin.oauth.service.LinkedInOAuthServiceCall;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.ObjectUtils;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.view.RedirectView;
 
-import com.linkedin.oauth.builder.ScopeBuilder;
-import com.linkedin.oauth.pojo.AccessToken;
-import com.linkedin.oauth.service.LinkedInOAuthService;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Properties;
+import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static com.linkedin.oauth.Constants.*;
+import static com.linkedin.oauth.util.Constants.*;
 
 /*
  * Getting Started with LinkedIn's OAuth APIs ,
@@ -53,8 +41,8 @@ import com.linkedin.oauth.service.LinkedInOAuthService;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = { "http://localhost:4200", "www.linkedin.com",
-		"http://localhost:8080" }, allowedHeaders = "Requestor-Type")
+@CrossOrigin(origins = {"http://localhost:4200", "www.linkedin.com",
+        "http://localhost:8080"}, allowedHeaders = "Requestor-Type")
 public final class LinkedInOAuthController {
 
 /*	@Bean
@@ -62,258 +50,275 @@ public final class LinkedInOAuthController {
 		return builder.build();
 	}*/
 
-	@Autowired
-	private RestTemplate restTemplate;
+    @Autowired
+    private RestTemplate restTemplate;
 
-	@Autowired
-	LinkedInAuthDetailsDAO linkedInAuthDetailsDAO;
+    @Autowired
+    LinkedInAuthDetailsDAO linkedInAuthDetailsDAO;
 
-	// Define all inputs in the property file
-	private Properties prop = new Properties();
-	private String propFileName = "config.properties";
-	public static String token = null;
-	public String refresh_token = null;
-	public LinkedInOAuthService service;
+    // Define all inputs in the property file
+    private Properties prop = new Properties();
+    private String propFileName = "config.properties";
+    public static String token = null;
+    public String refresh_token = null;
+    public LinkedInOAuthService service;
 
-	private Logger logger = Logger.getLogger(LinkedInOAuthController.class.getName());
+    @Autowired
+    LinkedInOAuthServiceCall linkedInOAuthServiceCall;
 
-	/**
-	 * Make a Login request with LinkedIN Oauth API
-	 *
-	 * @param code optional Authorization code
-	 * @return Redirects to the client UI after successful token creation
-	 */
+    private Logger logger = Logger.getLogger(LinkedInOAuthController.class.getName());
 
-	public String clientId = "77m71340tgxr9i";
-	public String clientSecret = "RfWUDDi3qulTBA4H";
-	public String redirectUrl = "http://localhost:8080/login";
+    /**
+     * Make a Login request with LinkedIN Oauth API
+     *
+     * @param code optional Authorization code
+     * @return Redirects to the client UI after successful token creation
+     */
 
-	// create button on your page and hit this get request
-	// @CrossOrigin(origins="*")
-	@GetMapping(value = "/login")
-	@ResponseBody
-	public RedirectView oauthAuthCode(@RequestParam(name = "code", required = false) final String code)
-			throws Exception {
+    public String clientId = "77m71340tgxr9i";
+    public String clientSecret = "RfWUDDi3qulTBA4H";
+    public String redirectUrl = "http://localhost:8080/login";
 
-		loadProperty();
+    // create button on your page and hit this get request
+    // @CrossOrigin(origins="*")
+    @GetMapping(value = "/login")
+    @ResponseBody
+    public RedirectView oauthAuthCode(@RequestParam(name = "code", required = false) final String code)
+            throws Exception {
 
-		// Construct the LinkedInOAuthService instance for use
-		service = new LinkedInOAuthService.LinkedInOAuthServiceBuilder().apiKey(prop.getProperty("clientId"))
-				.apiSecret(prop.getProperty("clientSecret"))
-				.defaultScope(new ScopeBuilder(prop.getProperty("scope").split(",")).build()) // replace with desired
-																								// scope
-				.callback(prop.getProperty("redirectUri")).build();
+        loadProperty();
 
-		final String secretState = "secret" + new Random().nextInt(999_999);
-		final String authorizationUrl = service.createAuthorizationUrlBuilder().state(secretState).build();
+        // Construct the LinkedInOAuthService instance for use
+        service = new LinkedInOAuthService.LinkedInOAuthServiceBuilder().apiKey(prop.getProperty("clientId"))
+                .apiSecret(prop.getProperty("clientSecret"))
+                .defaultScope(new ScopeBuilder(prop.getProperty("scope").split(",")).build()) // replace with desired
+                // scope
+                .callback(prop.getProperty("redirectUri")).build();
 
-		HttpEntity ent = getAuthCode();
-		// restTemplate.getForObject(authorizationUrl, ent, String.class);
-		ResponseEntity<String> response = restTemplate.exchange(authorizationUrl, HttpMethod.GET, ent, String.class);
-		// System.out.println(response.toString());
-		// System.out.println(response.getHeaders());
+        final String secretState = "secret" + new Random().nextInt(999_999);
+        final String authorizationUrl = service.createAuthorizationUrlBuilder().state(secretState).build();
 
-		System.out.println(response.unprocessableEntity());
+        HttpEntity ent = getAuthCode();
+        // restTemplate.getForObject(authorizationUrl, ent, String.class);
+        ResponseEntity<String> response = restTemplate.exchange(authorizationUrl, HttpMethod.GET, ent, String.class);
+        // System.out.println(response.toString());
+        // System.out.println(response.getHeaders());
 
-		RedirectView redirectView = new RedirectView("redirect:/users");
-		redirectView.setPropagateQueryParams(true);
-		// return redirectView;
+        System.out.println(response.unprocessableEntity());
 
-		redirectView.setUrl(authorizationUrl);
+        RedirectView redirectView = new RedirectView("redirect:/users");
+        redirectView.setPropagateQueryParams(true);
+        // return redirectView;
 
-		// redirectView.setAttributesMap("token")
+        redirectView.setUrl(authorizationUrl);
 
-		System.out.println(redirectView.getUrl());
-		return redirectView;
-	}
+        // redirectView.setAttributesMap("token")
 
-	@PostMapping(value = "/getToken")
-	public AccessToken oauthToken(@RequestParam(name = "code", required = false) final String code)
-			throws Exception {
-		String response =null;
-		AccessToken[] accessToken = { new AccessToken() };
-		loadProperty();
-		service = new LinkedInOAuthService.LinkedInOAuthServiceBuilder().apiKey(prop.getProperty("clientId"))
-				.apiSecret(prop.getProperty("clientSecret"))
-				.defaultScope(new ScopeBuilder(prop.getProperty("scope").split(",")).build()) // replace with desired
-																								// scope
-				.callback(prop.getProperty("redirectUri")).build();
+        System.out.println(redirectView.getUrl());
+        return redirectView;
+    }
 
-		
-        
-		if (code != null && !code.isEmpty()) {
+    @PostMapping(value = "/getToken")
+    public AccessToken oauthToken(@RequestParam(name = "code", required = false) final String code, @RequestParam(name = "loggedInUserId", required = false) final String loggedInUserId)
+            throws Exception {
+        String response = null;
+        LinkedInAuthDetails linkedInAuthDetails = null;
+        AccessToken[] accessToken = {new AccessToken()};
+        loadProperty();
+        if (!ObjectUtils.isEmpty(loggedInUserId)) {
+            linkedInAuthDetails = linkedInAuthDetailsDAO.findByUserId(loggedInUserId);
+            if (linkedInAuthDetails != null) {
+                TokenIntrospectionResponseDTO introspectResponse = linkedInOAuthServiceCall.tokenIntrospection(linkedInAuthDetails.getRefreshToken());
+                if (!ObjectUtils.isEmpty(introspectResponse) && introspectResponse.getActive() == Boolean.TRUE) {
+                    AccessToken accessToken1 = new AccessToken();
+                    accessToken1.setPersonId(loggedInUserId);
+                    accessToken1.setRefreshToken(linkedInAuthDetails.getRefreshToken());
+                    accessToken1.setAccessToken(linkedInAuthDetails.getAccessToken());
+                    accessToken1.setRefreshTokenExpiresIn(linkedInAuthDetails.getRefreshTokenExpirein());
+                    accessToken1.setExpiresIn(linkedInAuthDetails.getAccessTokenExpireIn());
+                    return accessToken1;
+                }
+            }
+        }
+        service = new LinkedInOAuthService.LinkedInOAuthServiceBuilder().apiKey(prop.getProperty("clientId"))
+                .apiSecret(prop.getProperty("clientSecret"))
+                .defaultScope(new ScopeBuilder(prop.getProperty("scope").split(",")).build()) // replace with desired
+                // scope
+                .callback(prop.getProperty("redirectUri")).build();
 
-			logger.log(Level.INFO, "Authorization code not empty, trying to generate a 3-legged OAuth token.");
+        if (code != null && !code.isEmpty()) {
+
+            logger.log(Level.INFO, "Authorization code not empty, trying to generate a 3-legged OAuth token.");
 
 
-			HttpEntity request = service.getAccessToken3Legged(code);
-			response = restTemplate.postForObject(REQUEST_TOKEN_URL, request, String.class);
+            HttpEntity request = service.getAccessToken3Legged(code);
+            response = restTemplate.postForObject(REQUEST_TOKEN_URL, request, String.class);
 
 
-			//todo
+            //todo
 
-			  accessToken[0] = service.convertJsonTokenToPojo(response);
+            accessToken[0] = service.convertJsonTokenToPojo(response);
 
-			  prop.setProperty("token", accessToken[0].getAccessToken()); token =
-			  accessToken[0].getAccessToken(); refresh_token =
-			  accessToken[0].getRefreshToken();
+            prop.setProperty("token", accessToken[0].getAccessToken());
+            token =
+                    accessToken[0].getAccessToken();
+            refresh_token =
+                    accessToken[0].getRefreshToken();
 
-			ProfileDetails profileDetails=new ProfileDetails();
-			String profileInfo=profile();
-			profileDetails=service.convertJsonToPojo(profileInfo);
+            ProfileDetails profileDetails = new ProfileDetails();
+            String profileInfo = profile();
+            profileDetails = service.convertJsonToPojo(profileInfo);
+            linkedInAuthDetails = linkedInAuthDetailsDAO.findByFirstNameAndLastName(profileDetails.getFirst_name(), profileDetails.getLast_name());
+            if (linkedInAuthDetails == null) {
+                linkedInAuthDetails = new LinkedInAuthDetails();
+                linkedInAuthDetails.setUserId(profileDetails.getId());
+                linkedInAuthDetails.setFirstName(profileDetails.getFirst_name());
+                linkedInAuthDetails.setLastName(profileDetails.getLast_name());
+                linkedInAuthDetails.setAccessToken(accessToken[0].getAccessToken());
+                linkedInAuthDetails.setAccessTokenExpireIn(accessToken[0].getExpiresIn());
+                linkedInAuthDetails.setRefreshToken(accessToken[0].getRefreshToken());
+                linkedInAuthDetails.setRefreshTokenExpirein(accessToken[0].getRefreshTokenExpiresIn());
+                linkedInAuthDetails.setScope(accessToken[0].getScope());
+                linkedInAuthDetails.setCreatedAt(getCurrentDate());
+            } else {
+                linkedInAuthDetails.setUserId(profileDetails.getId());
+                linkedInAuthDetails.setFirstName(profileDetails.getFirst_name());
+                linkedInAuthDetails.setLastName(profileDetails.getLast_name());
+                linkedInAuthDetails.setAccessToken(accessToken[0].getAccessToken());
+                linkedInAuthDetails.setAccessTokenExpireIn(accessToken[0].getExpiresIn());
+                linkedInAuthDetails.setRefreshToken(accessToken[0].getRefreshToken());
+                linkedInAuthDetails.setRefreshTokenExpirein(accessToken[0].getRefreshTokenExpiresIn());
+                linkedInAuthDetails.setScope(accessToken[0].getScope());
+                linkedInAuthDetails.setCreatedAt(getCurrentDate());
+            }
+            linkedInAuthDetailsDAO.save(linkedInAuthDetails);
+            accessToken[0].setPersonId(profileDetails.getId());
 
-			LinkedInAuthDetails linkedInAuthDetails= linkedInAuthDetailsDAO.findByFirstNameAndLastName(profileDetails.getFirst_name(),profileDetails.getLast_name());
+            logger.log(Level.INFO, "Generated Access token and Refresh Token.");
 
-			if(linkedInAuthDetails==null){
-				 linkedInAuthDetails=new LinkedInAuthDetails();
-				linkedInAuthDetails.setUserId(profileDetails.getId());
-				linkedInAuthDetails.setFirstName(profileDetails.getFirst_name());
-				linkedInAuthDetails.setLastName(profileDetails.getLast_name());
-				linkedInAuthDetails.setAccessToken(accessToken[0].getAccessToken());
-				linkedInAuthDetails.setAccessTokenExpireIn(accessToken[0].getExpiresIn());
-				linkedInAuthDetails.setRefreshToken(accessToken[0].getRefreshToken());
-				linkedInAuthDetails.setRefreshTokenExpirein(accessToken[0].getRefreshTokenExpiresIn());
-				linkedInAuthDetails.setScope(accessToken[0].getScope());
-				linkedInAuthDetails.setCreatedAt(getCurrentDate());
-			}else {
-				linkedInAuthDetails.setUserId(profileDetails.getId());
-				linkedInAuthDetails.setFirstName(profileDetails.getFirst_name());
-				linkedInAuthDetails.setLastName(profileDetails.getLast_name());
-				linkedInAuthDetails.setAccessToken(accessToken[0].getAccessToken());
-				linkedInAuthDetails.setAccessTokenExpireIn(accessToken[0].getExpiresIn());
-				linkedInAuthDetails.setRefreshToken(accessToken[0].getRefreshToken());
-				linkedInAuthDetails.setRefreshTokenExpirein(accessToken[0].getRefreshTokenExpiresIn());
-				linkedInAuthDetails.setScope(accessToken[0].getScope());
-				linkedInAuthDetails.setCreatedAt(getCurrentDate());
-			}
-			linkedInAuthDetailsDAO.save(linkedInAuthDetails);
-			accessToken[0].setPersonId(profileDetails.getId());
+            //redirectView.setUrl(prop.getProperty("client_url"));
+        }
 
-			logger.log(Level.INFO, "Generated Access token and Refresh Token.");
+        // redirectView.setAttributesMap("token")
 
-			//redirectView.setUrl(prop.getProperty("client_url"));
-		}
+        System.out.println(response.toString());
+        return accessToken[0];
+    }
 
-		// redirectView.setAttributesMap("token")
+    public HttpEntity getAuthCode() throws IOException {
 
-		System.out.println(response.toString());
-		return accessToken[0];
-	}
+        MultiValueMap<String, String> parameters = new LinkedMultiValueMap<String, String>();
+        parameters.add("response_type", "code");
+        parameters.add("client_id", "77m71340tgxr9i");
+        parameters.add(REDIRECT_URI, "http://localhost:4200/");
+        parameters.add("state", "secret415359");
+        parameters.add("scope", "r_liteprofile%20r_emailaddress%20w_member_social");
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED);
+        // headers.set(HttpHeaders.USER_AGENT, USER_AGENT_OAUTH_VALUE);
+        headers.setAccessControlAllowOrigin("*");
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<MultiValueMap<String, String>>(parameters,
+                headers);
+        return request;
 
-	public HttpEntity getAuthCode() throws IOException {
+    }
 
-		MultiValueMap<String, String> parameters = new LinkedMultiValueMap<String, String>();
-		parameters.add("response_type", "code");
-		parameters.add("client_id", "77m71340tgxr9i");
-		parameters.add(REDIRECT_URI, "http://localhost:4200/");
-		parameters.add("state", "secret415359");
-		parameters.add("scope", "r_liteprofile%20r_emailaddress%20w_member_social");
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED);
-		// headers.set(HttpHeaders.USER_AGENT, USER_AGENT_OAUTH_VALUE);
-		headers.setAccessControlAllowOrigin("*");
-		HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<MultiValueMap<String, String>>(parameters,
-				headers);
-		return request;
+    /**
+     * Create 2 legged auth access token
+     *
+     * @return Redirects to the client UI after successful token creation
+     */
+    @RequestMapping(value = "/twoLeggedAuth")
+    public RedirectView two_legged_auth() throws Exception {
+        loadProperty();
 
-	}
+        RedirectView redirectView = new RedirectView();
+        // Construct the LinkedInOAuthService instance for use
+        service = new LinkedInOAuthService.LinkedInOAuthServiceBuilder().apiKey(prop.getProperty("clientId"))
+                .apiSecret(prop.getProperty("clientSecret"))
+                .defaultScope(new ScopeBuilder(prop.getProperty("scope").split(",")).build())
+                .callback(prop.getProperty("redirectUri")).build();
 
-	/**
-	 * Create 2 legged auth access token
-	 *
-	 * @return Redirects to the client UI after successful token creation
-	 */
-	@RequestMapping(value = "/twoLeggedAuth")
-	public RedirectView two_legged_auth() throws Exception {
-		loadProperty();
+        final AccessToken[] accessToken = {new AccessToken()};
 
-		RedirectView redirectView = new RedirectView();
-		// Construct the LinkedInOAuthService instance for use
-		service = new LinkedInOAuthService.LinkedInOAuthServiceBuilder().apiKey(prop.getProperty("clientId"))
-				.apiSecret(prop.getProperty("clientSecret"))
-				.defaultScope(new ScopeBuilder(prop.getProperty("scope").split(",")).build())
-				.callback(prop.getProperty("redirectUri")).build();
+        HttpEntity request = service.getAccessToken2Legged();
+        String response = restTemplate.postForObject(REQUEST_TOKEN_URL, request, String.class);
+        accessToken[0] = service.convertJsonTokenToPojo(response);
+        prop.setProperty("token", accessToken[0].getAccessToken());
+        token = accessToken[0].getAccessToken();
 
-		final AccessToken[] accessToken = { new AccessToken() };
+        logger.log(Level.INFO, "Generated Access token.");
 
-		HttpEntity request = service.getAccessToken2Legged();
-		String response = restTemplate.postForObject(REQUEST_TOKEN_URL, request, String.class);
-		accessToken[0] = service.convertJsonTokenToPojo(response);
-		prop.setProperty("token", accessToken[0].getAccessToken());
-		token = accessToken[0].getAccessToken();
+        redirectView.setUrl(prop.getProperty("client_url"));
+        return redirectView;
+    }
 
-		logger.log(Level.INFO, "Generated Access token.");
+    /**
+     * Make a Token Introspection request with LinkedIN API
+     *
+     * @return check the Time to Live (TTL) and status (active/expired) for all
+     * token
+     */
 
-		redirectView.setUrl(prop.getProperty("client_url"));
-		return redirectView;
-	}
+    @RequestMapping(value = "/tokenIntrospection")
+    public String token_introspection(final String token) throws Exception {
+        loadProperty();
+        service = new LinkedInOAuthService.LinkedInOAuthServiceBuilder().apiKey(prop.getProperty("clientId"))
+                .apiSecret(prop.getProperty("clientSecret"))
+                .defaultScope(new ScopeBuilder(prop.getProperty("scope").split(",")).build())
+                .callback(prop.getProperty("redirectUri")).build();
+        if (service != null) {
+            HttpEntity request = service.introspectToken(token);
+            String response = restTemplate.postForObject(TOKEN_INTROSPECTION_URL, request, String.class);
+            logger.log(Level.INFO, "Token introspected. Details are {0}", response);
 
-	/**
-	 * Make a Token Introspection request with LinkedIN API
-	 *
-	 * @return check the Time to Live (TTL) and status (active/expired) for all
-	 *         token
-	 */
+            return response;
+        } else {
+            return TOKEN_INTROSPECTION_ERROR_MESSAGE;
+        }
+    }
 
-	@RequestMapping(value = "/tokenIntrospection")
-	public String token_introspection(final String token) throws Exception {
-		loadProperty();
-		service = new LinkedInOAuthService.LinkedInOAuthServiceBuilder().apiKey(prop.getProperty("clientId"))
-				.apiSecret(prop.getProperty("clientSecret"))
-				.defaultScope(new ScopeBuilder(prop.getProperty("scope").split(",")).build())
-				.callback(prop.getProperty("redirectUri")).build();
-		if (service != null) {
-			HttpEntity request = service.introspectToken(token);
-			String response = restTemplate.postForObject(TOKEN_INTROSPECTION_URL, request, String.class);
-			logger.log(Level.INFO, "Token introspected. Details are {0}", response);
+    /**
+     * Make a Refresh Token request with LinkedIN API
+     *
+     * @return get a new access token when your current access token expire
+     */
 
-			return response;
-		} else {
-			return TOKEN_INTROSPECTION_ERROR_MESSAGE;
-		}
-	}
+    @RequestMapping(value = "/refreshToken")
+    public String refresh_token(final String token) throws IOException {
+        HttpEntity request = service.getAccessTokenFromRefreshToken(token);
+        String response = restTemplate.postForObject(REQUEST_TOKEN_URL, request, String.class);
+        logger.log(Level.INFO, "Used Refresh Token to generate a new access token successfully.");
+        return response;
+    }
 
-	/**
-	 * Make a Refresh Token request with LinkedIN API
-	 *
-	 * @return get a new access token when your current access token expire
-	 */
+    /**
+     * Make a Public profile request with LinkedIN API
+     *
+     * @return Public profile of user
+     */
 
-	@RequestMapping(value = "/refreshToken")
-	public String refresh_token(final String token) throws IOException {
-		HttpEntity request = service.getAccessTokenFromRefreshToken(token);
-		String response = restTemplate.postForObject(REQUEST_TOKEN_URL, request, String.class);
-		logger.log(Level.INFO, "Used Refresh Token to generate a new access token successfully.");
-		return response;
-	}
+    @RequestMapping(value = "/profile")
+    public String profile() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.USER_AGENT, USER_AGENT_OAUTH_VALUE);
+        return restTemplate.exchange(LI_ME_ENDPOINT + token, HttpMethod.GET, new HttpEntity<>(headers), String.class)
+                .getBody();
+    }
 
-	/**
-	 * Make a Public profile request with LinkedIN API
-	 *
-	 * @return Public profile of user
-	 */
+    private void loadProperty() throws IOException {
+        InputStream inputStream = LinkedInOAuthController.class.getClassLoader().getResourceAsStream(propFileName);
+        if (inputStream != null) {
+            prop.load(inputStream);
+        } else {
+            throw new FileNotFoundException("property file '" + propFileName + "' not found in the classpath");
+        }
+    }
 
-	@RequestMapping(value = "/profile")
-	public String profile() {
-		HttpHeaders headers = new HttpHeaders();
-		headers.set(HttpHeaders.USER_AGENT, USER_AGENT_OAUTH_VALUE);
-		return restTemplate.exchange(LI_ME_ENDPOINT + token, HttpMethod.GET, new HttpEntity<>(headers), String.class)
-				.getBody();
-	}
-
-	private void loadProperty() throws IOException {
-		InputStream inputStream = LinkedInOAuthController.class.getClassLoader().getResourceAsStream(propFileName);
-		if (inputStream != null) {
-			prop.load(inputStream);
-		} else {
-			throw new FileNotFoundException("property file '" + propFileName + "' not found in the classpath");
-		}
-	}
-
-	private Date getCurrentDate() throws ParseException {
-		Date date=new Date();
-		SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
-		String currentDate=formatter.format(date);
-		return date=formatter.parse(currentDate);
-	}
+    private Date getCurrentDate() throws ParseException {
+        Date date = new Date();
+        SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+        String currentDate = formatter.format(date);
+        return date = formatter.parse(currentDate);
+    }
 }
