@@ -10,7 +10,8 @@ import lombok.ToString;
 import javax.persistence.*;
 import java.util.Date;
 
-@Entity(name = "master_data")
+@Entity
+@Table(name = "master_data")
 @Getter
 @Setter
 @NoArgsConstructor

@@ -24,7 +24,7 @@ public class LinkedInController {
     @GetMapping(value = "/posts")
     @ResponseBody // take from db
     public List<LinkedInMasterModel> getAllStories(){
-        return linkedInServices.getAllStories();
+        return linkedInServices.getStoriesWithPagination();
     }
 
     

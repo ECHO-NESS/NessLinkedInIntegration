@@ -15,6 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -182,7 +185,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
         if (!ObjectUtils.isEmpty(shareRequest.getLikePostIds())) {
             for (LikePostReqDTO likepost : shareRequest.getLikePostIds()) {
                 try {
-                    callLinkedInLikePost(likepost.getPostId(),personId);
+                    callLinkedInLikePost(likepost.getPostId(), personId);
                     postActionDTO.addLikedPosts(likepost.getPostId());
                 } catch (Exception e) {
                     logger.info("[ERROR]: postAction(): error while liking linkedin post postid:{}, personId:{}", likepost.getPostId(), personId);
@@ -197,7 +200,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
                     if (sharePost.getPostId().contains("share")) {
                         callShareRequest(personId, sharePost.getPostId(), sharePost.getComment());
                     } else if (sharePost.getPostId().contains("ugcPost")) {
-                         callUgcPostRequest(personId,sharePost.getPostId(), sharePost.getComment());
+                        callUgcPostRequest(personId, sharePost.getPostId(), sharePost.getComment());
                     }
                     postActionDTO.addSharePosts(sharePost.getPostId());
                 } catch (Exception e) {
@@ -207,9 +210,17 @@ public class LinkedInServicesImpl implements LinkedInServices {
                 }
             }
         }
-         msg = prepareMsgString(postActionDTO);
+        msg = prepareMsgString(postActionDTO);
         postActionDTO.setMessage(msg);
         return postActionDTO;
+    }
+
+    @Override
+    public List<LinkedInMasterModel> getStoriesWithPagination() {
+        logger.info("Get API to fetch posted stories : ");
+        Pageable topTen = PageRequest.of(0, 10, Sort.Direction.DESC, "id");
+        List<LinkedInMasterModel> response = linkedInRepo.findWithPageble(topTen);
+        return response;
     }
 
     private String prepareMsgString(PostActionDTO postActionDTO) {
@@ -235,7 +246,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
                         .add("com.linkedin.ugc.ShareContent", (Json.createObjectBuilder()
                                 .add("shareMediaCategory", "NONE")
                                 .add("shareCommentary", (Json.createObjectBuilder()
-                                        .add("text", comment!=null?comment:"")))))))
+                                        .add("text", comment != null ? comment : "")))))))
                 .add("author", "urn:li:person:" + personId)
                 .add("responseContext", (Json.createObjectBuilder()
                         .add("parent", postId))).build();
@@ -275,7 +286,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
                 .add("resharedShare", postId)
                 .add("owner", "urn:li:person:" + personId)
                 .add("text", (Json.createObjectBuilder()
-                        .add("text", comment!=null?comment:""))).build();
+                        .add("text", comment != null ? comment : ""))).build();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -343,13 +354,13 @@ public class LinkedInServicesImpl implements LinkedInServices {
                 }
             }
             //clean up post while getting from linkedIn
-            String commentary=dto.getCommentary();
-            String removeURnString=commentary.replaceAll("\\([^()]*\\)", "");
-            String removeSquareBrackets= removeURnString.replaceAll("\\[", "").replaceAll("\\]","");
-            String removeCurlyBrackets= removeSquareBrackets.replaceAll("\\{", "").replaceAll("\\}","");
-            String removeHashtag=removeCurlyBrackets.replace("hashtag|\\#|","#");
+            String commentary = dto.getCommentary();
+            String removeURnString = commentary.replaceAll("\\([^()]*\\)", "");
+            String removeSquareBrackets = removeURnString.replaceAll("\\[", "").replaceAll("\\]", "");
+            String removeCurlyBrackets = removeSquareBrackets.replaceAll("\\{", "").replaceAll("\\}", "");
+            String removeHashtag = removeCurlyBrackets.replace("hashtag|\\#|", "#");
 
-            String finalString=removeHashtag.replace("\\|","");
+            String finalString = removeHashtag.replace("\\|", "");
 
             linkedInMasterModel.setCommentary(finalString);
             if (Objects.nonNull(dto.getLifecycleStateInfoDto().getEditable())) {

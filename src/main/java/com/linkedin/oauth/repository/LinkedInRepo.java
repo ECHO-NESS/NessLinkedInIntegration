@@ -1,7 +1,11 @@
 package com.linkedin.oauth.repository;
 
 import com.linkedin.oauth.pojo.LinkedInMasterModel;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -13,6 +17,6 @@ public interface LinkedInRepo extends JpaRepository<LinkedInMasterModel, Integer
     <S extends LinkedInMasterModel> S save(S entity);
 
 
-    @Override
-    List<LinkedInMasterModel> findAll();
+    @Query(value = "select l from LinkedInMasterModel l")
+    List<LinkedInMasterModel> findWithPageble(Pageable pageable);
 }

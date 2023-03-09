@@ -20,4 +20,6 @@ public interface LinkedInServices {
     void saveLinkedInStories();
 
     PostActionDTO postAction(ActionRequest shareRequest) throws Exception;
+
+    List<LinkedInMasterModel> getStoriesWithPagination();
 }
