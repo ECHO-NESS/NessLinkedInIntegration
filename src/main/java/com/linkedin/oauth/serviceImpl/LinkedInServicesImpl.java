@@ -44,6 +44,9 @@ public class LinkedInServicesImpl implements LinkedInServices {
     @Value("${LINKEDIN_ADMIN_USERS}")
     String adminUsers;
 
+    @Value("${LINKEDIN_POST_COUNT}")
+    Integer postCount;
+
     @Autowired
     LinkedInRepo linkedInRepo;
 
