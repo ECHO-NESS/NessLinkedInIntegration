@@ -221,7 +221,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
     @Override
     public List<LinkedInMasterModel> getStoriesWithPagination() {
         logger.info("Get API to fetch posted stories : ");
-        Pageable topTen = PageRequest.of(0, 10, Sort.Direction.DESC, "id");
+        Pageable topTen = PageRequest.of(0, postCount, Sort.Direction.DESC, "id");
         List<LinkedInMasterModel> response = linkedInRepo.findWithPageble(topTen);
         return response;
     }
