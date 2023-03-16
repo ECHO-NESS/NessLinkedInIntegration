@@ -136,6 +136,13 @@ public final class LinkedInOAuthController {
                     accessToken1.setAccessToken(linkedInAuthDetails.getAccessToken());
                     accessToken1.setRefreshTokenExpiresIn(linkedInAuthDetails.getRefreshTokenExpirein());
                     accessToken1.setExpiresIn(linkedInAuthDetails.getAccessTokenExpireIn());
+
+                    prop.setProperty("token", accessToken1.getAccessToken());
+                    token =
+                            accessToken1.getAccessToken();
+                    refresh_token =
+                            accessToken1.getRefreshToken();
+
                     return accessToken1;
                 }
             }

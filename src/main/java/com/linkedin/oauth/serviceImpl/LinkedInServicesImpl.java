@@ -201,9 +201,9 @@ public class LinkedInServicesImpl implements LinkedInServices {
             for (SharePostReqDTO sharePost : shareRequest.getSharePostIds()) {
                 try {
                     if (sharePost.getPostId().contains("share")) {
-                        callShareRequest(personId, sharePost.getPostId(), sharePost.getComment(), personId);
+                        callShareRequest(personId, sharePost.getPostId(), sharePost.getComment());
                     } else if (sharePost.getPostId().contains("ugcPost")) {
-                        callUgcPostRequest(personId, sharePost.getPostId(), sharePost.getComment(), personId);
+                        callUgcPostRequest(personId, sharePost.getPostId(), sharePost.getComment());
                     }
                     postActionDTO.addSharePosts(sharePost.getPostId());
                 } catch (Exception e) {
@@ -240,7 +240,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
         return msg;
     }
 
-    private void callUgcPostRequest(String personId, String postId, String comment, String id) throws Exception {
+    private void callUgcPostRequest(String personId, String postId, String comment) throws Exception {
         JsonObject request = Json.createObjectBuilder().
                 add("lifecycleState", "PUBLISHED")
                 .add("visibility", (Json.createObjectBuilder())
@@ -256,9 +256,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        LinkedInAuthDetails linkedInAuthDetails = linkedInAuthDetailsDAO.findByUserId(personId);
-        headers.setBearerAuth(getRefreshToken(linkedInAuthDetails));
-        // headers.setBearerAuth(token);
+        headers.setBearerAuth(token);
         HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);
         logger.info("Request of ugcPost api: " + entity);
 
@@ -284,7 +282,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
     }
 
 
-    private void callShareRequest(String personId, String postId, String comment, String id) throws Exception {
+    private void callShareRequest(String personId, String postId, String comment) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         JsonObject request = Json.createObjectBuilder().
                 add("originalShare", postId)
@@ -295,8 +293,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        LinkedInAuthDetails linkedInAuthDetails = linkedInAuthDetailsDAO.findByUserId(personId);
-        headers.setBearerAuth(getRefreshToken(linkedInAuthDetails));
+        headers.setBearerAuth(token);
         HttpEntity<String> entity = new HttpEntity<>(request.toString(), headers);
         logger.info("Request of re-share api: " + entity);
         URI uri = null;
