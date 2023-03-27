@@ -6,7 +6,7 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
-@Profile("development")
+//@Profile("development")
 public class DevCorsConfiguration implements WebMvcConfigurer {
 
 	@Override
@@ -15,7 +15,7 @@ public class DevCorsConfiguration implements WebMvcConfigurer {
         .allowedMethods("*").
         allowedHeaders("*").
         allowCredentials(true)
-        .allowedOrigins("http://localhost:4200");
+        .allowedOrigins("http://amplify.ness.com");
 
     }
 }

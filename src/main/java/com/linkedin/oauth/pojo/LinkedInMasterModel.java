@@ -19,7 +19,7 @@ import java.util.Date;
 public class LinkedInMasterModel {
 
 	    @Id
-		@GeneratedValue(strategy = GenerationType.AUTO)
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
 	    private int id;
 
 		@Column(name = "created_at")

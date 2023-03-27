@@ -22,7 +22,7 @@ public class MainApplication {
 
     public static void main(final String[] args) {
         SpringApplication.run(MainApplication.class, args);
-        System.out.println("Current Directory = " + System.getProperty("user.dir"));
+
     }
 
     @Bean
