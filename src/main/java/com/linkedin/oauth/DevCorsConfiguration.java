@@ -15,7 +15,7 @@ public class DevCorsConfiguration implements WebMvcConfigurer {
         .allowedMethods("*").
         allowedHeaders("*").
         allowCredentials(true)
-        .allowedOrigins("http://amplify.ness.com");
+        .allowedOrigins("https://amplify.ness.com");
 
     }
 }

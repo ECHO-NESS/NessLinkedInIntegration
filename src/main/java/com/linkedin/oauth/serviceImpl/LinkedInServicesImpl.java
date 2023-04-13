@@ -221,7 +221,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
     @Override
     public List<LinkedInMasterModel> getStoriesWithPagination() {
         logger.info("Get API to fetch posted stories : ");
-        Pageable topTen = PageRequest.of(0, postCount, Sort.Direction.DESC, "id");
+        Pageable topTen = PageRequest.of(0, postCount, Sort.Direction.DESC, "createdAt");
         List<LinkedInMasterModel> response = linkedInRepo.findWithPageble(topTen);
         return response;
     }
@@ -229,7 +229,7 @@ public class LinkedInServicesImpl implements LinkedInServices {
     private String prepareMsgString(PostActionDTO postActionDTO) {
         String msg = null;
         if (ObjectUtils.isEmpty(postActionDTO.getFailedLikePosts()) && ObjectUtils.isEmpty(postActionDTO.getFailedSharePosts())) {
-            msg = "All post shared and/Or liked Successful";
+            msg = "Operation completed on LinkedIN";
         } else if (!ObjectUtils.isEmpty(postActionDTO.getFailedLikePosts()) && ObjectUtils.isEmpty(postActionDTO.getFailedSharePosts())) {
             msg = "All Post liked and shared successfully except postIDs:" + postActionDTO.getFailedLikePosts() + " not liked";
         } else if (!ObjectUtils.isEmpty(postActionDTO.getFailedSharePosts()) && ObjectUtils.isEmpty(postActionDTO.getFailedLikePosts())) {

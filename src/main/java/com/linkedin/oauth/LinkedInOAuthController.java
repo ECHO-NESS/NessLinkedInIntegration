@@ -41,8 +41,8 @@ import static com.linkedin.oauth.util.Constants.*;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = {"http://amplify.ness.com", "www.linkedin.com",
-        "http://amplify.ness.com:8080"}, allowedHeaders = "Requestor-Type")
+@CrossOrigin(origins = {"https://amplify.ness.com", "www.linkedin.com",
+        "https://amplify.ness.com:8080"}, allowedHeaders = "Requestor-Type")
 public final class LinkedInOAuthController {
 
 /*	@Bean
@@ -77,7 +77,7 @@ public final class LinkedInOAuthController {
 
     public String clientId = "77m71340tgxr9i";
     public String clientSecret = "RfWUDDi3qulTBA4H";
-    public String redirectUrl = "http://amplify.ness.com:8080/login";
+    public String redirectUrl = "https://amplify.ness.com:8080/login";
 
     // create button on your page and hit this get request
     // @CrossOrigin(origins="*")
@@ -217,7 +217,7 @@ public final class LinkedInOAuthController {
         MultiValueMap<String, String> parameters = new LinkedMultiValueMap<String, String>();
         parameters.add("response_type", "code");
         parameters.add("client_id", "77m71340tgxr9i");
-        parameters.add(REDIRECT_URI, "http://amplify.ness.com/");
+        parameters.add(REDIRECT_URI, "https://amplify.ness.com/");
         parameters.add("state", "secret415359");
         parameters.add("scope", "r_liteprofile%20r_emailaddress%20w_member_social");
         HttpHeaders headers = new HttpHeaders();
